@@ -14,9 +14,9 @@ class socket_connect {
   sockaddr* sockaddr_ptr_;
   uint sockaddr_size_;
 
- public:
   static constexpr int ERR_SOCKET = -1;
 
+ public:
   socket_connect(int port, short in_family = AF_INET)
       : port_(port),
         in_family_(in_family),
@@ -26,10 +26,18 @@ class socket_connect {
     sockaddr_.sin_port = htons(port_);
   }
 
-  int connect(bool inaddr_any) {
-    if ((socket_fd_ = socket(in_family_, SOCK_STREAM, 0)) < 0) {
+  ~socket_connect() {
+    // Close the listening socket
+    shutdown(socket_fd_, SHUT_RDWR);
+  }
+
+  void connect(bool inaddr_any) {
+    socket_fd_ = socket(in_family_, SOCK_STREAM, 0);
+    std::cout << "socket FD [" << socket_fd_ << "]" << std::endl;
+    if (socket_fd_ < 0) {
       std::cout << "Socket creation error" << std::endl;
-      return ERR_SOCKET;  // todo: throw
+      socket_fd_ = ERR_SOCKET;
+      return;
     }
 
     if (inaddr_any) {
@@ -38,14 +46,14 @@ class socket_connect {
       // Convert IPv4 and IPv6 addresses from text to binary form
       if (inet_pton(in_family_, "127.0.0.1", &sockaddr_.sin_addr) <= 0) {
         std::cout << "Invalid address / Address not supported" << std::endl;
-        return ERR_SOCKET;  // todo: throw
+        socket_fd_ = ERR_SOCKET;
+        return;
       }
     }
-    return socket_fd_;
   }
 
   int fd() const { return socket_fd_; }
-  in_addr* in_addr_ptr() { return &sockaddr_.sin_addr; }
+  bool not_connected() const { socket_fd_ == ERR_SOCKET; }
   sockaddr* sockaddr_ptr() const { return sockaddr_ptr_; }
   uint sockaddr_size() const { return sockaddr_size_; }
 };

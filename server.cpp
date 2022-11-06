@@ -16,29 +16,29 @@ int main(int argc, char const* argv[]) {
 
   // Connect to server port
   socket_connect sc(configs.port);
-  int socket_fd = sc.connect(true);
-  if (socket_fd == socket_connect::ERR_SOCKET) {
+  sc.connect(true);
+  if (sc.not_connected()) {
     perror("connect failed");
     exit(EXIT_FAILURE);
   }
 
   // Attach socket to port
   int opt = 1;
-  if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+  if (setsockopt(sc.fd(), SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
     perror("setsockopt failed");
     exit(EXIT_FAILURE);
   }
 
   socklen_t sockaddr_size = sc.sockaddr_size();
   // Bind socket to port
-  if (bind(socket_fd, sc.sockaddr_ptr(), sockaddr_size) < 0) {
+  if (bind(sc.fd(), sc.sockaddr_ptr(), sockaddr_size) < 0) {
     perror("bind failed");
     exit(EXIT_FAILURE);
   }
 
   // Listen to port
   cout << "listening ..." << endl;
-  if (listen(socket_fd, 3) < 0) {
+  if (listen(sc.fd(), 3) < 0) {
     perror("listen failed");
     exit(EXIT_FAILURE);
   }
@@ -51,7 +51,8 @@ int main(int argc, char const* argv[]) {
   for (size_t i = 0; i < 3; ++i) {
     // Accept incoming message
     cout << "accepting ... " << i << endl;
-    int accept_fd = accept(socket_fd, sc.sockaddr_ptr(), &sockaddr_size);
+    int accept_fd = accept(sc.fd(), sc.sockaddr_ptr(), &sockaddr_size);
+    cout << "accept FD [" << accept_fd << "]" << endl;
     if (accept_fd < 0) {
       perror("accept failed");
       exit(EXIT_FAILURE);
@@ -69,9 +70,6 @@ int main(int argc, char const* argv[]) {
     // Close the accept socket
     close(accept_fd);
   }
-
-  // Close the listening socket
-  shutdown(socket_fd, SHUT_RDWR);
 
   return 0;
 }
